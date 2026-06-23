@@ -1,6 +1,7 @@
 # raylib-scenes
 
 A 3D scene renderer using [raylib](https://www.raylib.com/) with a full-screen GLSL fragment shader.
+<img width="500" height="320" alt="image" src="https://github.com/user-attachments/assets/e4fe9fd2-136a-4b16-9d3b-e9a0084e6ad5" />
 
 ## Rendering Technique
 
