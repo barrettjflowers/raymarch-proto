@@ -6,8 +6,6 @@
 #define SCREEN_H 800
 #define MAIN_W   320
 #define MAIN_H   200
-#define LAND_W   640
-#define LAND_H   400
 #define SKY_W    480
 #define SKY_H    300
 
@@ -16,10 +14,8 @@ int main(void) {
     SetTargetFPS(60);
 
     RenderTexture2D mainTarget = LoadRenderTexture(MAIN_W, MAIN_H);
-    RenderTexture2D landTarget = LoadRenderTexture(LAND_W, LAND_H);
     RenderTexture2D skyTarget  = LoadRenderTexture(SKY_W, SKY_H);
     SetTextureFilter(mainTarget.texture, TEXTURE_FILTER_POINT);
-    SetTextureFilter(landTarget.texture, TEXTURE_FILTER_POINT);
     SetTextureFilter(skyTarget.texture, TEXTURE_FILTER_POINT);
 
     const char *vsCode =
@@ -50,9 +46,14 @@ int main(void) {
         "    float d = 1e9;\n"
         "    if (uPassType < 0.5) {\n"
         "        d = p.y;\n"
-        "        d = min(d, sdBox(p - vec3( 3.0, 0.5,  2.0), vec3(0.5)));\n"
-        "        d = min(d, sdBox(p - vec3(-2.5, 0.5, -2.5), vec3(0.5)));\n"
-        "        d = min(d, sdBox(p - vec3( 1.5, 0.5, -3.0), vec3(0.75, 0.25, 0.25)));\n"
+        "        d = min(d, sdBox(p - vec3(-5.0, 2.0,  2.0), vec3(1.5, 2.0, 2.0)));\n"
+        "        d = min(d, sdBox(p - vec3(-5.5, 3.0, -4.0), vec3(2.0, 3.0, 2.0)));\n"
+        "        d = min(d, sdBox(p - vec3(-4.5, 1.5,  7.0), vec3(1.5, 1.5, 2.5)));\n"
+        "        d = min(d, sdBox(p - vec3(-5.0, 2.5, -8.0), vec3(2.0, 2.5, 1.5)));\n"
+        "        d = min(d, sdBox(p - vec3( 5.0, 1.8, -2.0), vec3(1.5, 1.8, 2.0)));\n"
+        "        d = min(d, sdBox(p - vec3( 5.5, 3.5,  4.0), vec3(2.0, 3.5, 2.0)));\n"
+        "        d = min(d, sdBox(p - vec3( 4.5, 2.0, -6.0), vec3(1.5, 2.0, 2.5)));\n"
+        "        d = min(d, sdBox(p - vec3( 5.0, 1.5,  7.5), vec3(2.0, 1.5, 1.5)));\n"
         "    }\n"
         "    return d;\n"
         "}\n"
@@ -84,7 +85,7 @@ int main(void) {
         "    if (uPassType > 1.5) {\n"
         "        float skyGrad = 0.5 + 0.5 * rd.y;\n"
         "        col = mix(vec3(0.12, 0.09, 0.25), vec3(0.05, 0.03, 0.12), skyGrad);\n"
-        "        vec2 sv = gl_FragCoord.xy;\n"
+        "        vec2 sv = floor(rd.xy * 300.0);\n"
         "        float sh = hsh(sv);\n"
         "        float tp = hsh(sv + 100.0);\n"
         "        float twinkle = 0.5 + 0.5 * sin(uTime * 0.5 + tp * 6.283);\n"
@@ -92,8 +93,8 @@ int main(void) {
         "        float star = smoothstep(0.997, 0.998, sh) * twinkle;\n"
         "        vec3 starCol = mix(vec3(0.79, 0.75, 0.80), vec3(1.0), fract(sh * 7.0));\n"
         "        col = mix(col, starCol, star);\n"
-        "        vec2 sp = uv - vec2(0.0, 0.5);\n"
-        "        float core = step(length(sp), 0.12);\n"
+        "        vec3 moonDir = normalize(vec3(0.0, 0.2, -1.0));\n"
+        "        float core = step(0.997, dot(rd, moonDir));\n"
         "        float pulse = 0.85 + 0.15 * sin(uTime * 0.3);\n"
         "        vec3 sc = vec3(0.95, 0.9, 0.85) * pulse;\n"
         "        col = mix(col, sc, core);\n"
@@ -101,40 +102,8 @@ int main(void) {
         "        return;\n"
         "    }\n"
         "\n"
-        "    if (uPassType > 0.5) {\n"
-        "        vec2 sv = gl_FragCoord.xy;\n"
-        "        float sh = hsh(sv);\n"
-        "        float tp = hsh(sv + 100.0);\n"
-        "        float twinkle = 0.5 + 0.5 * sin(uTime * 0.5 + tp * 6.283);\n"
-        "        twinkle = 0.6 + 0.4 * twinkle;\n"
-        "        float star = smoothstep(0.997, 0.998, sh) * twinkle;\n"
-        "        vec3 starCol = mix(vec3(0.79, 0.75, 0.80), vec3(1.0), fract(sh * 7.0));\n"
-        "\n"
-        "        float hillCut = step(-0.1, rd.y);\n"
-        "        if (hillCut > 0.5 && rd.y < 0.03) {\n"
-        "            vec3 l = normalize(vec3(1.0, 1.5, -1.0));\n"
-        "            vec3 nn = normalize(vec3(\n"
-        "                -cos(rd.x * 7.0 + rd.z * 5.0) * 7.0 * 0.6\n"
-        "                - cos(rd.x * 15.0 - rd.z * 10.0) * 15.0 * 0.3\n"
-        "                - cos(rd.x * 28.0 + rd.z * 20.0) * 28.0 * 0.15,\n"
-        "                1.0,\n"
-        "                -cos(rd.x * 7.0 + rd.z * 5.0) * 5.0 * 0.6\n"
-        "                + cos(rd.x * 15.0 - rd.z * 10.0) * 10.0 * 0.3\n"
-        "                - cos(rd.x * 28.0 + rd.z * 20.0) * 20.0 * 0.15\n"
-        "            ));\n"
-        "            vec3 hc = vec3(0.173, 0.329, 0.310);\n"
-        "            hc *= 0.3 + 0.7 * max(dot(nn, l), 0.0);\n"
-        "            col = hc;\n"
-        "            col = mix(col, starCol, star);\n"
-        "            fragColor = vec4(col, 1.0);\n"
-        "        } else {\n"
-        "            fragColor = vec4(0.0, 0.0, 0.0, 0.0);\n"
-        "        }\n"
-        "        return;\n"
-        "    }\n"
-        "\n"
         "    float t = 0.0;\n"
-        "    for (int i = 0; i < 64; i++) {\n"
+        "    for (int i = 0; i < 128; i++) {\n"
         "        vec3 p = ro + rd * t;\n"
         "        float d = map(p);\n"
         "        if (d < 0.001) {\n"
@@ -142,20 +111,25 @@ int main(void) {
         "            vec3 light = normalize(vec3(1.0, 1.5, -1.0));\n"
         "            float dif = max(dot(n, light), 0.0);\n"
         "            float amb = 0.15 + 0.85 * max(dot(n, vec3(0.0, 1.0, 0.0)), 0.0);\n"
-        "            if (p.y < 0.01) {\n"
-        "                vec2 c = floor(p.xz * 2.0);\n"
-        "                float pat = mod(c.x + c.y, 2.0);\n"
-        "                col = mix(vec3(0.25, 0.23, 0.28), vec3(0.15, 0.13, 0.18), pat);\n"
+        "            if (p.y < 0.005) {\n"
+        "                if (abs(p.x) < 2.5) {\n"
+        "                    col = vec3(0.12, 0.12, 0.14);\n"
+        "                } else {\n"
+        "                    vec2 c = floor(p.xz * 2.0);\n"
+        "                    float pat = mod(c.x + c.y, 2.0);\n"
+        "                    col = mix(vec3(0.25, 0.23, 0.28), vec3(0.15, 0.13, 0.18), pat);\n"
+        "                }\n"
         "                col *= dif * 0.7 + amb * 0.5;\n"
         "            } else {\n"
-        "                col = vec3(0.8, 0.4, 0.15);\n"
+        "                float bh = hsh(floor(p.xz * 4.0 + 0.5));\n"
+        "                col = mix(vec3(0.7, 0.5, 0.3), vec3(0.4, 0.5, 0.6), bh);\n"
         "                col *= dif * 0.6 + 0.4;\n"
         "            }\n"
         "            fragColor = vec4(col, 1.0);\n"
         "            return;\n"
         "        }\n"
         "        t += d;\n"
-        "        if (t > 40.0) break;\n"
+        "        if (t > 200.0) break;\n"
         "    }\n"
         "\n"
         "    fragColor = vec4(0.0, 0.0, 0.0, 0.0);\n"
@@ -182,11 +156,19 @@ int main(void) {
 
     Vector3 playerPos = { 0.0f, 1.6f, 0.0f };
     float speed = 3.0f;
-    float yaw = atan2f(-0.5f, -0.8f);
-    float pitch = -0.08f;
+    float yaw = PI;
+    float pitch = -0.05f;
+    float mouseSens = 0.0006f;
+
+    DisableCursor();
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
+        Vector2 md = GetMouseDelta();
+        yaw -= md.x * mouseSens;
+        pitch -= md.y * mouseSens;
+        if (pitch > PI * 0.49f) pitch = PI * 0.49f;
+        if (pitch < -PI * 0.49f) pitch = -PI * 0.49f;
 
         Vector3 fwd = { sinf(yaw), 0.0f, cosf(yaw) };
         Vector3 sid = { cosf(yaw), 0.0f, -sinf(yaw) };
@@ -234,7 +216,6 @@ int main(void) {
         } while(0)
 
         RENDER_PASS(skyTarget,  2, SKY_W, SKY_H);
-        RENDER_PASS(landTarget, 1, LAND_W, LAND_H);
         RENDER_PASS(mainTarget, 0, MAIN_W, MAIN_H);
 
         BeginDrawing();
@@ -247,10 +228,6 @@ int main(void) {
             (Rectangle){ 0, 0, MAIN_W, -MAIN_H },
             (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
             (Vector2){ 0 }, 0.0f, WHITE);
-        DrawTexturePro(landTarget.texture,
-            (Rectangle){ 0, 0, LAND_W, -LAND_H },
-            (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
-            (Vector2){ 0 }, 0.0f, WHITE);
         DrawFPS(10, 10);
         EndDrawing();
     }
@@ -259,7 +236,6 @@ int main(void) {
     rlUnloadVertexBuffer(vbo);
     UnloadShader(shader);
     UnloadRenderTexture(mainTarget);
-    UnloadRenderTexture(landTarget);
     UnloadRenderTexture(skyTarget);
     CloseWindow();
 
